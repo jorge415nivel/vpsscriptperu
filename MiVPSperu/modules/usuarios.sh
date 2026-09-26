@@ -1,62 +1,77 @@
 #!/bin/bash
 # ==========================================
-# Módulo: Crear Usuario SSH con Expiración
+# Módulo: Crear Usuario SSH - Estilo Profesional
 # ==========================================
 
 clear
 echo "=========================================="
-echo "        CREAR NUEVO USUARIO SSH           "
+echo "        CREAR NUEVA CUENTA SSH            "
 echo "=========================================="
 
-# 1. Pedir nombre de usuario
 read -p " Nombre del usuario: " usuario
-
-# Validar que no esté vacío y no tenga espacios
 if [[ -z "$usuario" || "$usuario" =~ [[:space:]] ]]; then
     echo -e "\e[31m[ERROR] Nombre inválido o contiene espacios.\e[0m"
     sleep 2
     exit 1
 fi
-
-# 2. Verificar si el usuario ya existe
 if id "$usuario" &>/dev/null; then
     echo -e "\e[31m[ERROR] El usuario '$usuario' ya existe en el sistema.\e[0m"
     sleep 2
     exit 1
 fi
 
-# 3. Pedir contraseña (oculta)
 read -s -p " Contraseña: " pass
 echo ""
-
-# 4. Pedir días de validez
 read -p " Días de validez (ej. 1, 7, 30): " dias
-
-# Validar que sean números
 if ! [[ "$dias" =~ ^[0-9]+$ ]]; then
     echo -e "\e[31m[ERROR] Debes ingresar un número válido de días.\e[0m"
     sleep 2
     exit 1
 fi
 
-# 5. Calcular fecha de expiración (Formato YYYY-MM-DD)
-fecha_exp=$(date -d "+$dias days" '+%Y-%m-%d')
+read -p " Límite de conexiones simultáneas: " limit
+if ! [[ "$limit" =~ ^[0-9]+$ ]] || [ "$limit" -eq 0 ]; then
+    limit=1
+fi
 
-# 6. Crear el usuario y asignar contraseña
-useradd -m -s /bin/bash -e "$fecha_exp" "$usuario"
+fecha_exp_visual=$(date -d "+$dias days" '+%d/%m/%Y')
+fecha_exp_sys=$(date -d "+$dias days" '+%Y-%m-%d')
+
+# CREAR USUARIO FORZANDO /bin/bash
+useradd -m -s /bin/bash -e "$fecha_exp_sys" "$usuario"
 echo "$usuario:$pass" | chpasswd
 
-# 7. Mostrar resumen
+IP=$(curl -s ifconfig.me 2>/dev/null || echo "No disponible")
+
 clear
-echo "=========================================="
-echo "   ¡USUARIO CREADO CON ÉXITO! ✅          "
-echo "=========================================="
-echo -e " \e[32mUsuario\e[0m    : $usuario"
-echo -e " \e[32mContraseña\e[0m : $pass"
-echo -e " \e[32mVence el\e[0m   : $fecha_exp"
-echo -e " \e[32mPuerto SSH\e[0m : 22"
-echo -e " \e[32mIP del Server\e[0m: $(curl -s ifconfig.me)"
-echo "=========================================="
-echo " Guarda estos datos, no se volverán a mostrar."
-echo "=========================================="
-read -p " Presiona ENTER para volver al menú principal..."
+echo -e "\e[32mSSH ACCOUNT CREATED!\e[0m"
+echo ""
+echo -e "\e[33m♻️ Paid Private SSH ♻️\e[0m"
+echo ""
+echo -e "\e[36m$usuario\e[0m"
+echo "======================"
+echo "=❌ NO SPAM"
+echo "=❌ NO DDOS"
+echo "=❌ NO HACKING"
+echo "=❌ NO CARDING"
+echo "=❌ NO TORRENT"
+echo "=❌ NO OVER DOWNLOAD"
+echo "=❌ NO MULTILOGIN"
+echo "======================="
+echo ""
+echo -e "ᗚ IP \t\t• ๛ $IP"
+echo -e " Username \t• ๛ $usuario"
+echo -e "ᗚ Password \t• ๛ $pass"
+echo -e " Expire \t• ๛ $fecha_exp_visual"
+echo -e "ᗚ Limit \t• ๛ $limit"
+echo ""
+echo -e "࿂ SSH \t\t•  22"
+echo -e "࿂ SSL \t\t•  443"
+echo -e "࿂ Squid \t•  8080"
+echo -e "࿂ Dropbear \t•  80"
+echo " [-] ═───────◇───────═"
+echo -e "࿂ Badvpn \t•  7300"
+echo " [-] ═───────◇───────═"
+echo "›☬[•] SCRIPTS ═◇ MiVPSperu ◇═ [•]☬"
+echo ""
+read -p " Presiona ENTER para volver al MENU!"
