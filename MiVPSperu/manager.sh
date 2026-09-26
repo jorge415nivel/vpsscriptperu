@@ -1,6 +1,6 @@
 #!/bin/bash
 # ==========================================
-# MiVPS Manager - Estilo ADM (Versión Completa)
+# MiVPS Manager - Estilo ADM (Versión Estable)
 # ==========================================
 
 # Definición de colores
@@ -13,7 +13,6 @@ MAGENTA='\033[0;35m'
 WHITE='\033[1;37m'
 NC='\033[0m'
 
-# Función para obtener datos reales del sistema
 get_system_info() {
     OS=$(cat /etc/os-release | grep PRETTY_NAME | cut -d'=' -f2 | tr -d '"' | awk '{print $1, $2}')
     OS_VERSION=$(cat /etc/os-release | grep VERSION_ID | cut -d'=' -f2 | tr -d '"')
@@ -98,49 +97,33 @@ while true; do
             ;;
         2)
             clear
-            DB="/etc/MiVPSperu/user_data.db"
-            mkdir -p /etc/MiVPSperu
-            [ ! -f "$DB" ] && touch "$DB"
-
-            echo "User         Password       limit      validity"
+            echo "============================================================"
+            echo "              USUARIOS SSH ACTUALES                         "
+            echo "============================================================"
             
-            TOTAL=0
-            ONLINES=0
-            DEADLINES=0
-            TODAY=$(date +%s)
-
-            while IFS=: read -r user pass limit exp_date; do
-                [ -z "$user" ] && continue
+            # ESTE ES EL MÉTODO QUE SÍ FUNCIONABA Y DETECTABA TUS USUARIOS
+            USUARIOS=$(awk -F: '$3 >= 1000 && $1 != "nobody" && $1 != "ubuntu" {print $1}' /etc/passwd)
+            COUNT=$(echo "$USUARIOS" | grep -c . 2>/dev/null || echo 0)
+            [ -z "$USUARIOS" ] && COUNT=0
+            
+            if [ "$COUNT" -eq 0 ]; then
+                echo -e " \e[31m  No hay usuarios creados actualmente.\e[0m"
+            else
+                echo -e " \e[32mTotal de usuarios:\e[0m \e[1;33m$COUNT\e[0m"
+                echo "------------------------------------------------------------"
+                printf "  \e[33m%-12s\e[0m | \e[33m%-15s\e[0m | \e[33m%-15s\e[0m\n" "USUARIO" "PUERTOS" "FECHA EXPIRA"
+                echo "------------------------------------------------------------"
                 
-                if id "$user" &>/dev/null; then
-                    TOTAL=$((TOTAL+1))
-                    
-                    EXP_SEC=$(date -d "$exp_date" +%s 2>/dev/null)
-                    DAYS_LEFT=$(( (EXP_SEC - TODAY) / 86400 ))
-                    
-                    if [ "$DAYS_LEFT" -lt 0 ]; then
-                        DAYS_LEFT=0
-                        DEADLINES=$((DEADLINES+1))
-                        COLOR_DIAS="\e[31m"
-                    else
-                        COLOR_DIAS="\e[32m"
-                    fi
-
-                    if who | grep -q "^$user "; then
-                        ONLINES=$((ONLINES+1))
-                    fi
-
-                    printf " \e[32m%-12s\e[0m \e[33m%-14s\e[0m \e[36m%-10s\e[0m ${COLOR_DIAS}%-10s\e[0m\n" "$user" "$pass" "$limit" "$DAYS_LEFT Dias"
-                    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-                else
-                    sed -i "/^$user:/d" "$DB"
-                fi
-            done < "$DB"
-
-            echo ""
-            echo -e "• \e[33mAll USERS $TOTAL\e[0m • \e[32mONLINES: $ONLINES\e[0m • \e[31mDEADLINES: $DEADLINES\e[0m •"
-            echo ""
-            read -p "ENTER to return to MENU!"
+                for user in $USUARIOS; do
+                    EXP_DATE=$(chage -l "$user" 2>/dev/null | grep -i "expires\|expira" | cut -d: -f2 | xargs)
+                    [ -z "$EXP_DATE" ] && EXP_DATE="Nunca"
+                    printf "  \e[32m%-12s\e[0m | \e[36m%-15s\e[0m | %-15s\n" "$user" "22, 443, 80" "$EXP_DATE"
+                done
+            fi
+            echo "============================================================"
+            echo " Nota: Las contraseñas se muestran solo en el momento de crear."
+            echo "============================================================"
+            read -p " Presiona ENTER para volver al menú..."
             ;;
         3)
             clear
@@ -150,7 +133,6 @@ while true; do
             read -p " Nombre del usuario a eliminar: " user_del
             if id "$user_del" &>/dev/null; then
                 userdel -r "$user_del" 2>/dev/null || userdel "$user_del"
-                sed -i "/^$user_del:/d" /etc/MiVPSperu/user_data.db
                 echo -e "\e[32m[OK] Usuario '$user_del' eliminado.\e[0m"
             else
                 echo -e "\e[31m[ERROR] El usuario no existe.\e[0m"
