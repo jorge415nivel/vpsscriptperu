@@ -1,6 +1,6 @@
 #!/bin/bash
 # ==========================================
-# MiVPS Manager - Estilo ADM (Versión Profesional Robusta)
+# MiVPS Manager - Estilo ADM (Versión Completa)
 # ==========================================
 
 # Definición de colores
@@ -35,12 +35,8 @@ get_system_info() {
     
     CPU_PERCENT=$(top -bn1 | grep -i "cpu" | awk '{print $2}' | cut -d'%' -f1 | head -n 1)
     [ -z "$CPU_PERCENT" ] && CPU_PERCENT="0.0"
-    
-    # CONTEO DE USUARIOS REALES (UID >= 1000)
-    USER_COUNT=$(awk -F: '$3 >= 1000 && $1 != "nobody" && $1 != "ubuntu" {print $1}' /etc/passwd | wc -l)
 }
 
-# Función para mostrar el banner
 show_banner() {
     echo -e "${CYAN}"
     echo "  ██╗    ██╗███████╗██████╗ "
@@ -52,7 +48,6 @@ show_banner() {
     echo -e "${NC}"
 }
 
-# Función para mostrar información del sistema
 show_system_info() {
     get_system_info
     echo -e "${RED}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
@@ -69,7 +64,6 @@ show_system_info() {
     echo -e "${RED}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 }
 
-# Función para mostrar el menú de protocolos
 show_protocols_menu() {
     echo -e "${CYAN}🔧 GESTIÓN Y PROTOCOLOS 🔧${NC}"
     echo -e "${RED}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
@@ -89,7 +83,6 @@ show_protocols_menu() {
     echo -e "${RED}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 }
 
-# Bucle principal del menú
 while true; do
     clear
     show_banner
@@ -105,31 +98,49 @@ while true; do
             ;;
         2)
             clear
-            echo "=========================================="
-            echo "        USUARIOS SSH ACTUALES             "
-            echo "=========================================="
+            DB="/etc/MiVPSperu/user_data.db"
+            mkdir -p /etc/MiVPSperu
+            [ ! -f "$DB" ] && touch "$DB"
+
+            echo "User         Password       limit      validity"
             
-            # OBTENER USUARIOS REALES (UID >= 1000)
-            USUARIOS=$(awk -F: '$3 >= 1000 && $1 != "nobody" && $1 != "ubuntu" {print $1}' /etc/passwd)
-            COUNT=$(echo "$USUARIOS" | grep -c . 2>/dev/null || echo 0)
-            [ -z "$USUARIOS" ] && COUNT=0
-            
-            if [ "$COUNT" -eq 0 ]; then
-                echo -e " \e[31m  No hay usuarios creados actualmente.\e[0m"
-            else
-                echo -e " \e[32mTotal de usuarios:\e[0m \e[1;33m$COUNT\e[0m"
-                echo "--------------------------------------------------"
-                printf "  %-15s | %-20s\n" "USUARIO" "FECHA DE VENCIMIENTO"
-                echo "--------------------------------------------------"
+            TOTAL=0
+            ONLINES=0
+            DEADLINES=0
+            TODAY=$(date +%s)
+
+            while IFS=: read -r user pass limit exp_date; do
+                [ -z "$user" ] && continue
                 
-                for user in $USUARIOS; do
-                    EXP_DATE=$(chage -l "$user" 2>/dev/null | grep -i "expires\|expira" | cut -d: -f2 | xargs)
-                    [ -z "$EXP_DATE" ] && EXP_DATE="Nunca"
-                    printf "  \e[32m%-15s\e[0m | %-20s\n" "$user" "$EXP_DATE"
-                done
-            fi
-            echo "=========================================="
-            read -p " Presiona ENTER para volver al menú..."
+                if id "$user" &>/dev/null; then
+                    TOTAL=$((TOTAL+1))
+                    
+                    EXP_SEC=$(date -d "$exp_date" +%s 2>/dev/null)
+                    DAYS_LEFT=$(( (EXP_SEC - TODAY) / 86400 ))
+                    
+                    if [ "$DAYS_LEFT" -lt 0 ]; then
+                        DAYS_LEFT=0
+                        DEADLINES=$((DEADLINES+1))
+                        COLOR_DIAS="\e[31m"
+                    else
+                        COLOR_DIAS="\e[32m"
+                    fi
+
+                    if who | grep -q "^$user "; then
+                        ONLINES=$((ONLINES+1))
+                    fi
+
+                    printf " \e[32m%-12s\e[0m \e[33m%-14s\e[0m \e[36m%-10s\e[0m ${COLOR_DIAS}%-10s\e[0m\n" "$user" "$pass" "$limit" "$DAYS_LEFT Dias"
+                    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+                else
+                    sed -i "/^$user:/d" "$DB"
+                fi
+            done < "$DB"
+
+            echo ""
+            echo -e "• \e[33mAll USERS $TOTAL\e[0m • \e[32mONLINES: $ONLINES\e[0m • \e[31mDEADLINES: $DEADLINES\e[0m •"
+            echo ""
+            read -p "ENTER to return to MENU!"
             ;;
         3)
             clear
@@ -139,6 +150,7 @@ while true; do
             read -p " Nombre del usuario a eliminar: " user_del
             if id "$user_del" &>/dev/null; then
                 userdel -r "$user_del" 2>/dev/null || userdel "$user_del"
+                sed -i "/^$user_del:/d" /etc/MiVPSperu/user_data.db
                 echo -e "\e[32m[OK] Usuario '$user_del' eliminado.\e[0m"
             else
                 echo -e "\e[31m[ERROR] El usuario no existe.\e[0m"
