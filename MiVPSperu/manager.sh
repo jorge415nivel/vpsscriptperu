@@ -96,9 +96,32 @@ while true; do
             echo "=========================================="
             echo "        USUARIOS SSH ACTUALES             "
             echo "=========================================="
-            cat /etc/passwd | grep "/bin/bash" | grep -v "root" | cut -d: -f1
+            
+            # Obtener lista de usuarios (excluyendo root)
+            USUARIOS=$(cat /etc/passwd | grep "/bin/bash" | grep -v "root" | cut -d: -f1)
+            
+            # Contar cuántos hay
+            COUNT=$(echo "$USUARIOS" | grep -c . 2>/dev/null || echo 0)
+            [ -z "$USUARIOS" ] && COUNT=0
+            
+            if [ "$COUNT" -eq 0 ]; then
+                echo -e " \e[31m  No hay usuarios creados actualmente.\e[0m"
+            else
+                echo -e " \e[32mTotal de usuarios:\e[0m \e[1;33m$COUNT\e[0m"
+                echo "--------------------------------------------------"
+                printf "  %-15s | %-20s\n" "USUARIO" "FECHA DE VENCIMIENTO"
+                echo "--------------------------------------------------"
+                
+                for user in $USUARIOS; do
+                    # Obtener fecha de expiración (compatible con español/inglés)
+                    EXP_DATE=$(chage -l "$user" 2>/dev/null | grep -i "expires\|expira" | cut -d: -f2 | xargs)
+                    [ -z "$EXP_DATE" ] && EXP_DATE="Nunca"
+                    
+                    printf "  \e[32m%-15s\e[0m | %-20s\n" "$user" "$EXP_DATE"
+                done
+            fi
             echo "=========================================="
-            read -p " Presiona ENTER para volver..."
+            read -p " Presiona ENTER para volver al menú..."
             ;;
         3)
             clear
