@@ -1,14 +1,19 @@
 #!/bin/bash
 # ==========================================
-# MiVPS Manager - Estilo ADM (Versión Final)
+# MiVPS Manager - Estilo ADM (Versión Profesional Robusta)
 # ==========================================
 
+# Definición de colores
 CYAN='\033[0;36m'
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+MAGENTA='\033[0;35m'
+WHITE='\033[1;37m'
 NC='\033[0m'
 
+# Función para obtener datos reales del sistema
 get_system_info() {
     OS=$(cat /etc/os-release | grep PRETTY_NAME | cut -d'=' -f2 | tr -d '"' | awk '{print $1, $2}')
     OS_VERSION=$(cat /etc/os-release | grep VERSION_ID | cut -d'=' -f2 | tr -d '"')
@@ -30,19 +35,24 @@ get_system_info() {
     
     CPU_PERCENT=$(top -bn1 | grep -i "cpu" | awk '{print $2}' | cut -d'%' -f1 | head -n 1)
     [ -z "$CPU_PERCENT" ] && CPU_PERCENT="0.0"
+    
+    # CONTEO DE USUARIOS REALES (UID >= 1000)
+    USER_COUNT=$(awk -F: '$3 >= 1000 && $1 != "nobody" && $1 != "ubuntu" {print $1}' /etc/passwd | wc -l)
 }
 
+# Función para mostrar el banner
 show_banner() {
     echo -e "${CYAN}"
     echo "  ██╗    ██╗███████╗██████╗ "
-    echo "  ██║    ██║██╔════╝██╔══██╗"
+    echo "  ██║    ██║██╔════╝██══██╗"
     echo "  ██║ █╗ ██║█████╗  ██████╔╝"
     echo "  ██║███╗██║██╔══╝  ██╔══██╗"
     echo "  ╚███╔███╔╝███████╗██████╔╝"
-    echo "   ╚══╝╚══╝ ╚══════╝╚═════╝ "
+    echo "   ╚══╝╚══╝ ╚══════╝═════╝ "
     echo -e "${NC}"
 }
 
+# Función para mostrar información del sistema
 show_system_info() {
     get_system_info
     echo -e "${RED}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
@@ -59,6 +69,7 @@ show_system_info() {
     echo -e "${RED}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 }
 
+# Función para mostrar el menú de protocolos
 show_protocols_menu() {
     echo -e "${CYAN}🔧 GESTIÓN Y PROTOCOLOS 🔧${NC}"
     echo -e "${RED}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
@@ -78,6 +89,7 @@ show_protocols_menu() {
     echo -e "${RED}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 }
 
+# Bucle principal del menú
 while true; do
     clear
     show_banner
@@ -97,10 +109,8 @@ while true; do
             echo "        USUARIOS SSH ACTUALES             "
             echo "=========================================="
             
-            # Obtener lista de usuarios (excluyendo root)
-            USUARIOS=$(cat /etc/passwd | grep "/bin/bash" | grep -v "root" | cut -d: -f1)
-            
-            # Contar cuántos hay
+            # OBTENER USUARIOS REALES (UID >= 1000)
+            USUARIOS=$(awk -F: '$3 >= 1000 && $1 != "nobody" && $1 != "ubuntu" {print $1}' /etc/passwd)
             COUNT=$(echo "$USUARIOS" | grep -c . 2>/dev/null || echo 0)
             [ -z "$USUARIOS" ] && COUNT=0
             
@@ -113,10 +123,8 @@ while true; do
                 echo "--------------------------------------------------"
                 
                 for user in $USUARIOS; do
-                    # Obtener fecha de expiración (compatible con español/inglés)
                     EXP_DATE=$(chage -l "$user" 2>/dev/null | grep -i "expires\|expira" | cut -d: -f2 | xargs)
                     [ -z "$EXP_DATE" ] && EXP_DATE="Nunca"
-                    
                     printf "  \e[32m%-15s\e[0m | %-20s\n" "$user" "$EXP_DATE"
                 done
             fi
