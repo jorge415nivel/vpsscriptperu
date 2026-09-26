@@ -4,17 +4,22 @@ echo "========================================"
 echo "      INSTALADOR MiVPS SCRIPT v1.0      "
 echo "========================================"
 
+# 1. Verificar que sea ROOT
 if [ "$EUID" -ne 0 ]; then
   echo "[ERROR] Debes ejecutar esto como usuario ROOT."
   exit 1
 fi
 
+# 2. Actualizar sistema e instalar wget por si acaso
 echo "[1/2] Actualizando sistema..."
 apt update -y -qq > /dev/null 2>&1
+apt install -y wget curl > /dev/null 2>&1
 
+# 3. Descargar el panel (¡URL CORREGIDA a 'vpsscriptperu'!)
 echo "[2/2] Descargando el panel de control..."
-wget -qO /usr/bin/mivps https://raw.githubusercontent.com/jorge415nivel/MiVPS/main/manager.sh
+wget -qO /usr/bin/mivps https://raw.githubusercontent.com/jorge415nivel/vpsscriptperu/main/manager.sh
 
+# 4. Dar permisos de ejecución
 chmod +x /usr/bin/mivps
 
 echo "========================================"
